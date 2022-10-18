@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_konverter_listview/widget/convert.dart';
-import 'package:flutter_konverter_listview/widget/input.dart';
-import 'package:flutter_konverter_listview/widget/result.dart';
+import 'package:flutter/services.dart';
+import 'components/result.dart';
+import 'components/listHistory.dart';
 
 void main() {
   runApp(MyApp());
@@ -9,116 +9,126 @@ void main() {
 
 class MyApp extends StatefulWidget {
   @override
-  _MyAppState createState() => _MyAppState();
+  State<MyApp> createState() => _MyAppState();
 }
 
 class _MyAppState extends State<MyApp> {
-  // text controller
-  TextEditingController etInput = new TextEditingController();
-  //variabel berubah
   double _inputUser = 0;
-  double _result = 0;
-  String selectedDropdown = "kelvin";
-  //0 fixing error di layout
-  //buang expanded di result widget
-  //1 buat variabel dropdown
-  var listSatuanSuhu = ["kelvin", "reamur"];
-  List<String> listHasil = [];
+  double _kelvin = 0;
+  double _reamur = 0;
+  TextEditingController controllerInput = new TextEditingController();
+  String _newValue = "Kelvin";
+  double hasil = 0;
+  List<String> listViewItem = <String>[];
 
-  _konversiSuhu() {
-    setState(() {
-      print(listHasil.length);
-      _inputUser = double.parse(etInput.text);
-      switch (selectedDropdown) {
-        case "kelvin":
-          {
-            // statements;
-            _result = _inputUser + 273;
-            listHasil.add("Konversi dari : " +
-                "$_inputUser" +
-                " ke " +
-                "$_result" +
-                " Kelvin");
-          }
-          break;
-
-        case "reamur":
-          {
-            //statements;
-            _result = _inputUser * 4 / 5;
-            listHasil.add("Konversi dari : " +
-                "$_inputUser" +
-                " ke " +
-                "$_result" +
-                " Reamur");
-          }
-          break;
-      }
-    });
+  void _konversi() {
+    setState(
+      () {
+        _inputUser = double.parse(controllerInput.text);
+        if (_newValue == "Kelvin")
+          hasil = _inputUser + 273;
+        else
+          hasil = (4 / 5) * _inputUser;
+      },
+    );
   }
 
-  _onDropdownChanged(String value) {
-    setState(() {
-      selectedDropdown = value;
-    });
-  }
+  var listItem = ["Kelvin", "Reamur"];
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        title: 'Flutter Demo',
-        theme: ThemeData(
-          primarySwatch: Colors.blue,
-          visualDensity: VisualDensity.adaptivePlatformDensity,
+      title: 'Iftitah Temperature Converter',
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      debugShowCheckedModeBanner: false,
+      home: Scaffold(
+        appBar: AppBar(
+          title: const Text("Temperature Converter"),
         ),
-        home: Scaffold(
-          appBar: AppBar(
-            title: Text("Konverter Suhu"),
-          ),
-          body: Container(
-            margin: EdgeInsets.all(8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.max,
-              children: [
-                Input(etInput: etInput),
-                //3 buat dropdown biasa
-                DropdownButton(
-                  items: listSatuanSuhu.map((String value) {
-                    return DropdownMenuItem(
+        body: Container(
+          margin: const EdgeInsets.all(8),
+          child: Column(
+            children: [
+              Input(controllerInput: controllerInput),
+              DropdownButton<String>(
+                items: listItem.map(
+                  (String value) {
+                    return DropdownMenuItem<String>(
                       value: value,
                       child: Text(value),
                     );
-                  }).toList(),
-                  value: selectedDropdown,
-                  onChanged: _onDropdownChanged,
-                  isExpanded: true,
-                ),
-                Container(
-                  margin: EdgeInsets.only(top: 20, bottom: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Result(
-                        result: _result,
-                      ),
-                    ],
+                  },
+                ).toList(),
+                value: _newValue,
+                onChanged: (String? changeValue) {
+                  setState(() {
+                    _newValue = changeValue.toString();
+                  });
+                  _konversi();
+                  listViewItem.add('$_newValue: $hasil');
+                },
+              ),
+              result(hasil: hasil),
+              const ConversionButton(),
+              const Center(
+                child: Text(
+                  'Riwayat Konversi',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                Convert(konvertHandler: _konversiSuhu),
-                Expanded(
-                  child: ListView.builder(
-                    itemCount: listHasil.length,
-                    itemBuilder: (context, index) {
-                      return Container(
-                        child: Text(listHasil[index]),
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
+              ),
+              Expanded(
+                child: listHistory(listViewItem: listViewItem),
+              ),
+            ],
           ),
-        ));
+        ),
+      ),
+    );
+  }
+}
+
+class Input extends StatelessWidget {
+  const Input({
+    Key? key,
+    required this.controllerInput,
+  }) : super(key: key);
+
+  final TextEditingController controllerInput;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: controllerInput,
+      decoration: const InputDecoration(hintText: 'Masukkan Suhu Dalam celcius'),
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+    );
+  }
+}
+
+class ConversionButton extends StatelessWidget {
+  const ConversionButton({
+    Key? key,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(top: 20, bottom: 20),
+      width: 1000,
+      height: 40,
+      child: ElevatedButton(
+        onPressed: () {
+          // _konversi();
+        },
+        child: const Text('Konversi'),
+      ),
+    );
   }
 }
